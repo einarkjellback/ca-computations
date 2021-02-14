@@ -1,5 +1,11 @@
-package main
+package cacomp
 
 func main() {
-	print("Hello, World!")
+	// Initialize cellular automaton
+
+	// Run VNS on CA
+
+	// Display results:
+	// Show fitness convergence graph
+	// Show 2-dimensional history
 }
