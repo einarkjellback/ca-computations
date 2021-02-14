@@ -34,7 +34,8 @@ func vnd(ca *CA, kMax int) *CA {
   curr := ca.rules
 	for k := 1; k <= kMax; {
 		// Find fittest candidate from k-neighborhood
-    curr,
+    next := findFittest(ca, )
+    curr, k = neighborhoodChange(curr, next, k)
 	}
 	// Return fittest candidate found
 	return nil
