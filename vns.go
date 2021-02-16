@@ -15,32 +15,48 @@ package cacomp
     return x
 */
 
-// Run performs a general variable neighborhood search on the provided cellular automaton. It stops after iterating for maxIter.
-func Run(ca *CA, kmax int, maxIter int) (RuleTable, error) {
-	// Generate random solution
+// Run performs a general variable neighborhood search on the density classification problem. It stops after iterating for maxIter.
+func Run(kmax int, lmax int, maxIter int) ([]Rules, map[Rules]float64, map[Rules][]Config, error) {
+	// Generate random configuration
 
 	// run GVNS (See pseudocode above)
-	return nil, nil
+	return nil, nil, nil, nil
 }
 
 // shake picks a random solution from the k-neighborhood.
-func shake(ca *CA, k int) *CA {
+func shake(r Rules, k int) Rules {
 	// Flip k randomly selected bits and return result
-	return nil
+	return 0
 }
 
 // vnd finds the fittest candidate from the k=1 to k=kMax neighborhoods
-func vnd(ca *CA, kMax int) *CA {
-  curr := ca.rules
+func vnd(r Rules, kMax int) Rules {
 	for k := 1; k <= kMax; {
 		// Find fittest candidate from k-neighborhood
-    next := findFittest(ca, )
-    curr, k = neighborhoodChange(curr, next, k)
+		next := findFittest(r, k)
+		r, k = neighborhoodChange(r, next, k)
 	}
 	// Return fittest candidate found
-	return nil
+	return 0
 }
 
-func neighborhoodChange(curr Rules, next Rules, k int) {
-  if
+func neighborhoodChange(curr Rules, next Rules, k int) (Rules, int) {
+	currFit := fitness(curr)
+	nextFit := fitness(next)
+	if nextFit > currFit {
+		k = 1
+		curr = next
+	} else {
+		k += 1
+	}
+	return curr, k
+}
+
+func findFittest(r Rules, k int) Rules {
+	return 0
+}
+
+func fitness(r Rules) float64 {
+	// Fitness is fraction of correct states after running x amount of steps
+	return 0
 }
