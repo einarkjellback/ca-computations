@@ -1,12 +1,23 @@
-package cacomp
+package main
 
-import "log"
+import (
+	"fmt"
+	"github.com/einarkjellback/cacomp/ca"
+	"github.com/einarkjellback/cacomp/vns"
+	"log"
+	"reflect"
+)
 
 func main() {
+	// runSim()
+	fmt.Println(reflect.TypeOf([]int{1, 2, 3, 4}[1:3]))
+}
+
+func runSim() {
 	// Run VNS
 	kmax := 3
 	iters := 10
-	rs, fits, cs, err := Run(kmax, kmax-1, iters)
+	rs, fits, cs, err := vns.Run(kmax, kmax-1, iters)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -17,4 +28,4 @@ func main() {
 	display(rs, fits, cs)
 }
 
-func display(rs []Rules, fits map[Rules]float64, cs map[Rules][]Config) {}
+func display(rs []ca.Rules, fits map[ca.Rules]float64, cs map[ca.Rules][]ca.Config) {}
