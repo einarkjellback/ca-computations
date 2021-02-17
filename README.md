@@ -11,3 +11,14 @@ Sub-questions:
 
 Strategy:
   - Try replicating the density classification task, but using adaptive neighborhood search instead of a genetic algorithm.
+
+Cheatsheet for rules:
+
+111 110 101 100 011 010 001 000   // Radius = 1
+
+110100011
+
+
+11110 11101 11010 10100 01000 10001 00011 00111 01111  
+  1     0     0     1     0     0     1     1     1
+  30    29    26    20    8     17    3     7     15

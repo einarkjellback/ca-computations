@@ -5,12 +5,11 @@ import (
 	"github.com/einarkjellback/cacomp/ca"
 	"github.com/einarkjellback/cacomp/vns"
 	"log"
-	"reflect"
 )
 
 func main() {
 	// runSim()
-	fmt.Println(reflect.TypeOf([]int{1, 2, 3, 4}[1:3]))
+	fmt.Println(1<<0 + 1<<2 + 1<<5)
 }
 
 func runSim() {
