@@ -2,21 +2,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/einarkjellback/cacomp/ca"
+	// "github.com/einarkjellback/cacomp/ca"
 	"github.com/einarkjellback/cacomp/vns"
 	"log"
 )
 
 func main() {
 	// runSim()
-	fmt.Println(1<<0 + 1<<2 + 1<<5)
+	m := make(map[int]int)
+	_, ok := m[0]
+	fmt.Println(ok)
 }
 
 func runSim() {
 	// Run VNS
 	kmax := 3
 	iters := 10
-	rs, fits, cs, err := vns.Run(kmax, kmax-1, iters)
+	rec, err := vns.Run(kmax, kmax-1, iters)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -24,7 +26,7 @@ func runSim() {
 	// Display results:
 	// Show fitness convergence graph
 	// Show 2-dimensional history
-	display(rs, fits, cs)
+	display(rec)
 }
 
-func display(rs []ca.Rules, fits map[ca.Rules]float64, cs map[ca.Rules][]ca.Config) {}
+func display(rec *vns.Vns) {}

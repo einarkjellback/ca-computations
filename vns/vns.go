@@ -1,7 +1,12 @@
 package vns
 
 import (
+	"container/heap"
+	"errors"
+	"fmt"
 	"github.com/einarkjellback/cacomp/ca"
+	"log"
+	"math/rand"
 )
 
 /*
@@ -19,34 +24,116 @@ import (
     return x
 */
 
-// Run performs a general variable neighborhood search on the density classification problem. It stops after iterating for maxIter.
-func Run(kmax int, lmax int, maxIter int) ([]ca.Rules, map[ca.Rules]float64, map[ca.Rules][]ca.Config, error) {
-	// Generate random configuration
+const SIMS = 20
+const CONFIG_SIZE = 51 // Must be an odd number
+const RADIUS = 2
+const ITERS = 50
 
-	// run GVNS (See pseudocode above)
-	return nil, nil, nil, nil
+var RULE_WIDTH int
+
+func init() {
+	RULE_WIDTH = int(pow(2, 2*RADIUS+1))
 }
 
-// shake picks a random solution from the k-neighborhood.
-func shake(r ca.Rules, k int) ca.Rules {
-	// Flip k randomly selected bits and return result
-	return 0
+/*
+Vns contains various details of a variable neighborhood (VNS) run.
+*/
+type Vns struct {
+	// Rules sorted by fitness, highest to lowest
+	Rules *RuleHeap
+	// Maps a rule to its fitness value
+	RuleFits map[uint32]float64
+	// Complete history of density classification tasks performed
+	RuleConfigs map[uint32][][][]bool
+}
+
+type RuleHeap []struct {
+	r   uint32
+	fit float64
+}
+
+// Sort interface
+func (h RuleHeap) Len() int           { return len(h) }
+func (h RuleHeap) Less(i, j int) bool { return h[i].fit > h[j].fit }
+func (h RuleHeap) Swap(i, j int) {
+	temp := h[i]
+	h[i] = h[j]
+	h[j] = temp
+}
+
+// Heap interface
+func (h *RuleHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[:n-1]
+	return x
+}
+func (h *RuleHeap) Push(x interface{}) {
+	*h = append(*h, x.(struct {
+		r   uint32
+		fit float64
+	}))
+}
+
+/* Run performs a general variable neighborhood search on the density classification problem. It stops after iterating for maxIter. kmax is the maximum neighborhood size for the shake function, while lmax is the maximum neighborhood size for the variable neighborhood descent function.
+ */
+func Run(kmax int, lmax int, maxIter int) (*Vns, error) {
+	vns := &Vns{}
+	heap.Init(vns.Rules)
+	// Generate random rule
+	r := rand.Uint32()
+	vns.Rules.Push(struct {
+		r   uint32
+		fit float64
+	}{r, vns.fitness(r)})
+
+	// run GVNS (See pseudocode above)
+	for i := 0; i < maxIter; i++ {
+		for k := 1; k <= kmax; {
+			newR, err := vns.shake(r, k)
+			if err != nil {
+				log.Fatal(err)
+			}
+			newR = vns.vnd(newR, lmax)
+			r, k = vns.neighborhoodChange(r, newR, k)
+		}
+	}
+
+	return vns, nil
+}
+
+// shake picks a random, untried solution from the k-neighborhood.
+func (vns *Vns) shake(r uint32, k int) (uint32, error) {
+	// Flip k randomly selected bits and returns result
+	if k <= 0 || k > RULE_WIDTH {
+		return 0, errors.New(fmt.Sprintf("k = %v not in interval [0, %v]", k, RULE_WIDTH))
+	}
+
+	pos := make([]int, k)
+	for i := range pos {
+		pos[i] = int(rand.Uint32()) // Duplicates are possible, but highly unlikely
+	}
+	newR, err := flipN(r, pos)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return newR, nil
 }
 
 // vnd finds the fittest candidate from the k=1 to k=kMax neighborhoods
-func vnd(r ca.Rules, kMax int) ca.Rules {
+func (vns *Vns) vnd(r uint32, kMax int) uint32 {
 	for k := 1; k <= kMax; {
-		// Find fittest candidate from k-neighborhood
-		next := findFittest(r, k)
-		r, k = neighborhoodChange(r, next, k)
+		next := vns.findFittest(r, k)
+		r, k = vns.neighborhoodChange(r, next, k)
 	}
 	// Return fittest candidate found
-	return 0
+	return r
 }
 
-func neighborhoodChange(curr ca.Rules, next ca.Rules, k int) (ca.Rules, int) {
-	currFit := fitness(curr)
-	nextFit := fitness(next)
+func (vns *Vns) neighborhoodChange(curr uint32, next uint32, k int) (uint32, int) {
+	currFit := vns.fitness(curr)
+	nextFit := vns.fitness(next)
 	if nextFit > currFit {
 		k = 1
 		curr = next
@@ -56,11 +143,116 @@ func neighborhoodChange(curr ca.Rules, next ca.Rules, k int) (ca.Rules, int) {
 	return curr, k
 }
 
-func findFittest(r ca.Rules, k int) ca.Rules {
-	return 0
+// Find fittest candidate from k-neighborhood
+func (vns *Vns) findFittest(r uint32, k int) uint32 {
+	hood, err := getNeighborhood(r, k)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, n := range hood {
+		if vns.fitness(r) < vns.fitness(n) {
+			r = n
+		}
+	}
+	return r
 }
 
-func fitness(r ca.Rules) float64 {
-	// Fitness is fraction of correct states after running x amount of steps
-	return 0
+func (vns *Vns) fitness(r uint32) float64 {
+	fit, ok := vns.RuleFits[r]
+	if !ok {
+		fit = vns.calcFitness(r)
+		vns.RuleFits[r] = fit
+	}
+	// Fitness is the fraction of correct states after running x amount of steps
+	return fit
+}
+
+func CountAlive(config []bool) int {
+	acc := 0
+	for _, alive := range config {
+		if alive {
+			acc += 1
+		}
+	}
+	return acc
+}
+
+func (vns *Vns) calcFitness(r uint32) float64 {
+	fit := 0.0
+	for i := 0; i < SIMS; i++ {
+		config, err := ca.RandConfig(CONFIG_SIZE)
+		if err != nil {
+			log.Fatal(err)
+		}
+		moreThanHalfAliveOld := CountAlive(config)*2 > CONFIG_SIZE
+		sim, err := ca.UpdateN(config, RADIUS, r, ITERS)
+		if err != nil {
+			log.Fatal(err)
+		}
+		vns.RuleConfigs[r] = append(vns.RuleConfigs[r], sim)
+		config = sim[len(sim)-1]
+		aliveCnt := CountAlive(config)
+		currFit := float64(aliveCnt) / float64(CONFIG_SIZE)
+		if !moreThanHalfAliveOld {
+			currFit = 1.0 - currFit
+		}
+		fit += currFit
+	}
+	return fit / SIMS
+}
+
+func getNeighborhood(r uint32, k int) ([]uint32, error) {
+	if k > 13 {
+		return nil, errors.New(fmt.Sprintf("want k <= 13 due to too many permutations above 13 flips, but got k = %v", k))
+	}
+
+	totPerms := pow(32, k)
+	allRules := make([]uint32, totPerms)
+	genAllRules(r, k, 0, allRules)
+	return allRules, nil
+}
+
+func genAllRules(r uint32, k int, start int, acc []uint32) {
+	if k == 0 {
+		acc = append(acc, r)
+		return
+	}
+	for i := start; i <= 32-k; i++ {
+		flip(r, i)
+		genAllRules(r, k, i+1, acc)
+	}
+}
+
+func flipN(r uint32, pos []int) (uint32, error) {
+	for _, p := range pos {
+		r, err := flip(r, p)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	return r, nil
+}
+
+func flip(r uint32, pos int) (uint32, error) {
+	if pos < 0 || pos >= RULE_WIDTH {
+		return 0, errors.New(fmt.Sprintf("flip at position %v outside interval [0, %v]", pos, RULE_WIDTH-1))
+	}
+
+	flipper := uint32(1) << pos
+	if r&flipper == 0 {
+		r |= flipper
+	} else {
+		flipper = ^flipper
+		r &= flipper
+	}
+	return r, nil
+}
+
+func pow(n, m int) uint64 {
+	acc := uint64(1)
+	p := uint64(n)
+	for i := 0; i < m; i++ {
+		acc *= p
+	}
+	return acc
 }
