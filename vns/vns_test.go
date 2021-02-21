@@ -2,7 +2,9 @@ package vns
 
 import (
 	"container/heap"
+	// "fmt"
 	"log"
+	"math/rand"
 	"reflect"
 	"testing"
 )
@@ -54,9 +56,62 @@ func TestRuleHeap(t *testing.T) {
 }
 
 func TestFlip(t *testing.T) {
-	// cases := []struct {
+	cases := []struct {
+		r    uint32
+		p    int
+		want uint32
+	}{
+		{0b0, 0, 0b1},
+		{0b1, 0, 0b0},
+		{0b10011100, 3, 0b10010100},
+	}
+	for _, c := range cases {
+		if got, err := flip(c.r, c.p); err != nil {
+			log.Fatal(err)
+		} else if got != c.want {
+			log.Fatalf("want %v, but was %v", c.want, got)
+		}
 
-	// }
+	}
+}
+
+func TestFlipIsOwnInverse(t *testing.T) {
+	cases := 10
+	for i := 0; i < cases; i++ {
+		r := rand.Uint32()
+		p := rand.Intn(32)
+		f, err := flip(r, p)
+		if err != nil {
+			log.Fatal(err)
+		}
+		got, err := flip(f, p)
+		if err != nil {
+			log.Fatal(err)
+		}
+		want := r
+		if got != want {
+			log.Fatalf("want %v, but got %v", want, got)
+		}
+	}
+}
+
+func TestFlipError(t *testing.T) {
+	// We are assuming that const RADIUS = 2
+	cases := []struct {
+		r    uint32
+		p    int
+		want string
+	}{
+		{0b0, 32, "flip at position 32 outside interval [0, 31]"},
+		{0b0, -1, "flip at position -1 outside interval [0, 31]"},
+	}
+	for _, c := range cases {
+		if _, err := flip(c.r, c.p); err == nil {
+			log.Fatal("want non-nil error, but was nil")
+		} else if err.Error() != c.want {
+			log.Fatalf("want %#v, but got %#v", c.want, err.Error())
+		}
+	}
 }
 
 func TestFlipN(t *testing.T) {

@@ -36,11 +36,12 @@ const RADIUS = 2
 // Controls number of generations that each CA will run.
 var ITERS int
 
-// The total size of the neighborhood i.e. the diameter of the neighborhood.
+// The number of bits required to represent a rule with radius r.
 var RULE_WIDTH int
 
 func init() {
 	ITERS = 2 * CONFIG_SIZE
+
 	temp, err := pow(2, 2*RADIUS+1)
 	if err != nil {
 		log.Fatal(err)
