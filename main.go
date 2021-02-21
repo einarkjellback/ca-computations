@@ -1,17 +1,14 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	// "github.com/einarkjellback/cacomp/ca"
 	"github.com/einarkjellback/cacomp/vns"
 	"log"
 )
 
 func main() {
-	// runSim()
-	m := make(map[int]int)
-	_, ok := m[0]
-	fmt.Println(ok)
+	runSim()
 }
 
 func runSim() {
